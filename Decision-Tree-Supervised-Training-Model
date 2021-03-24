@@ -29,4 +29,8 @@ print("accuracy_score: %.2f"
 
 #model predicts an accuracy_score: 0.90
 
+#store it in a file for use later on for API
+import pickle
+pickle.dump(clf, open('models/final_prediction.pickle', 'wb'))
+
 
