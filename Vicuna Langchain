@@ -1,0 +1,136 @@
+class LlamaForCausalLM(LlamaPreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.model = LlamaModel(config)
+
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def get_input_embeddings(self):
+        return self.model.embed_tokens
+
+    def set_input_embeddings(self, value):
+        self.model.embed_tokens = value
+
+    def get_output_embeddings(self):
+        return self.lm_head
+
+    def set_output_embeddings(self, new_embeddings):
+        self.lm_head = new_embeddings
+
+def get_embeddings(model, tokenizer, prompt):
+    input_ids = tokenizer(prompt).input_ids
+    input_embeddings = model.get_input_embeddings()
+    embeddings = input_embeddings(torch.LongTensor([input_ids]))
+    mean = torch.mean(embeddings[0], 0).cpu().detach()
+    return mean
+
+with open("germany.txt") as f:
+    book = f.read()
+
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.vectorstores import Chroma
+
+text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+texts = text_splitter.split_text(book)
+docsearch = Chroma.from_texts(
+    texts, embeddings, metadatas=[{"source": str(i)} for i in range(len(texts))]
+)
+
+if self._embedding_function is not None:
+    embeddings = self._embedding_function.embed_documents(list(texts))
+
+class VicunaEmbeddings(BaseModel, Embeddings):
+    def _call(self, prompt: str) -> str:
+        p = prompt.strip()
+        print("Sending prompt ", p)
+        response = requests.post(
+            "http://127.0.0.1:8000/embedding",
+            json={
+                "prompt": p,
+            },
+        )
+        response.raise_for_status()
+        return response.json()["response"]
+
+    def embed_documents(
+        self, texts: List[str], chunk_size: Optional[int] = 0
+    ) -> List[List[float]]:
+        """Call out to Vicuna's server embedding endpoint for embedding search docs.
+
+        Args:
+            texts: The list of texts to embed.
+            chunk_size: The chunk size of embeddings. If None, will use the chunk size
+                specified by the class.
+
+        Returns:
+            List of embeddings, one for each text.
+        """
+        results = []
+        for text in texts:
+            response = self.embed_query(text)
+            results.append(response)
+        return results
+
+    def embed_query(self, text) -> List[float]:
+        """Call out to Vicuna's server embedding endpoint for embedding query text.
+
+        Args:
+            text: The text to embed.
+
+        Returns:
+            Embedding for the text.
+        """
+        embedding = self._call(text)
+        return embedding
+
+
+from langchain_app.models.vicuna_embeddings import VicunaEmbeddings
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.vectorstores import Chroma
+
+
+embeddings = VicunaEmbeddings()
+
+with open("germany.txt") as f:
+    book = f.read()
+
+text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+texts = text_splitter.split_text(book)
+docsearch = Chroma.from_texts(
+    texts, embeddings, metadatas=[{"source": str(i)} for i in range(len(texts))]
+)
+
+while True:
+    query = input("Type your search: ")
+    docs = docsearch.similarity_search_with_score(query, k=1)
+    for doc in docs:
+        print(doc)
+
+
+from langchain.embeddings import SentenceTransformerEmbeddings 
+embeddings = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")
+
+
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.vectorstores import Chroma
+from langchain.embeddings import SentenceTransformerEmbeddings 
+
+embeddings = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")
+
+with open("germany.txt") as f:
+    book = f.read()
+
+text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+texts = text_splitter.split_text(book)
+docsearch = Chroma.from_texts(
+    texts, embeddings, metadatas=[{"source": str(i)} for i in range(len(texts))]
+)
+
+while True:
+    query = input("Type your search: ")
+    docs = docsearch.similarity_search_with_score(query, k=1)
+    for doc in docs:
+        print(doc)
