@@ -1,0 +1,56 @@
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+
+# Load historical stock price data
+# You need to have historical stock price data in a CSV file
+data = pd.read_csv('stock_price_data.csv')
+data['Date'] = pd.to_datetime(data['Date'])
+data.set_index('Date', inplace=True)
+
+# Define a function to preprocess the data
+def preprocess_data(data):
+    scaler = MinMaxScaler()
+    data['Close'] = scaler.fit_transform(data['Close'].values.reshape(-1, 1))
+    return data
+
+data = preprocess_data(data)
+
+# Define a function to create sequences for time series prediction
+def create_sequences(data, seq_length):
+    sequences = []
+    target = []
+    for i in range(len(data) - seq_length):
+        seq = data[i:i+seq_length]
+        label = data.iloc[i+seq_length]['Close']
+        sequences.append(seq)
+        target.append(label)
+    return np.array(sequences), np.array(target)
+
+# Define hyperparameters
+seq_length = 10
+epochs = 50
+batch_size = 64
+
+# Split data into training and testing sets
+X, y = create_sequences(data, seq_length)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Build a simple LSTM model
+model = tf.keras.Sequential([
+    tf.keras.layers.LSTM(50, return_sequences=True, input_shape=(seq_length, 1)),
+    tf.keras.layers.LSTM(50, return_sequences=False),
+    tf.keras.layers.Dense(25),
+    tf.keras.layers.Dense(1)
+])
+
+# Compile the model
+model.compile(optimizer='adam', loss='mean_squared_error')
+
+# Train the model
+model.fit(X_train, y_train, batch_size=batch_size, epochs=epochs, validation_data=(X_test, y_test))
+
+# Make predictions
+predictions = model.predict(X_test)
